@@ -54,24 +54,29 @@ export async function handler(req: NextApiRequest, res: NextApiResponse) {
     chunkSize: 1000,
     chunkOverlap: 200,
   })
-  const docs = textSplitter.splitDocuments([rawDocs])
+  const docs = await textSplitter.splitDocuments([rawDocs])
 
-  const pinecone = new PineconeClient()
-  await pinecone.init({
-    environment: "us-west1-gcp",
-    apiKey: pineconeApiKey,
-  })
-
-  const index = pinecone.Index(PINECONE_INDEX_NAME)
-  await PineconeStore.fromDocuments(
-    index,
-    docs,
-    new OpenAIEmbeddings({
-      openAIApiKey: openaiApiKey,
+  try {
+    const pinecone = new PineconeClient()
+    await pinecone.init({
+      environment: "us-west1-gcp",
+      apiKey: pineconeApiKey,
     })
-  )
 
-  res.status(200).json({})
+    const index = pinecone.Index(PINECONE_INDEX_NAME)
+    await PineconeStore.fromDocuments(
+      index,
+      docs,
+      new OpenAIEmbeddings({
+        modelName: "text-embedding-ada-002",
+        openAIApiKey: openaiApiKey,
+      })
+    )
+
+    res.status(200).json({})
+  } catch (e) {
+    res.status(500).json({ error: e.message || "Unknown error." })
+  }
 }
 
 export const config: PageConfig = {
